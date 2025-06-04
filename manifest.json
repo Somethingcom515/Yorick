@@ -1,0 +1,14 @@
+{
+    "name": "Yorick",
+    "id": "yorick",
+    "version": "1.0.0",
+    "website_url": "",
+    "description": "A joker stacking system built from Overflow.",
+    "prefix": "yorick",
+    "author": ["Somethingcom515"],
+    "main_file": "Yorick.lua",
+    "priority": 9,
+    "badge_colour": "FDA200",
+    "dependencies": [],
+    "conflicts": []
+}

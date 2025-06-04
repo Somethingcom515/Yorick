@@ -1,0 +1,132 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/controller.lua"
+pattern = '''
+local debugplus = require("debugplus.core")
+debugplus.handleKeys(self, key, dt)
+'''
+position = "at"
+payload = '''
+local debugplus = require("debugplus.core")
+local ref = debugplus.handleKeys
+debugplus.handleKeys = function(controller, key, dt)
+    if controller.hovering.target and controller.hovering.target:is(Card) then
+        local _card = controller.hovering.target
+        if key == "c" then
+            local _area
+            if _card.ability.set == 'Joker' then
+                _area = G.jokers
+            elseif _card.playing_card then
+                if G.hand and G.hand.config.card_count ~= 0 then
+                    _area = G.hand
+                else 
+                    _area = G.deck
+                end
+            elseif _card.ability.consumeable then
+                _area = G.consumeables
+            end
+            if _area == nil then
+                return print("Error: Trying to dup card without an area")
+            end
+            local new_card = copy_card(_card, nil, nil, _card.playing_card, nil, true)
+            new_card:add_to_deck()
+            if _card.playing_card then
+                table.insert(G.playing_cards, new_card)
+            end
+            _area:emplace(new_card)
+        else
+            ref(controller, key, dt)
+        end
+    end
+end
+debugplus.handleKeys(self, key, dt)
+'''
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = '''function love.load()'''
+position = "before"
+payload = '''
+Yorick = {}
+Yorick.blacklist = {
+
+}
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "cardarea.lua"
+pattern = '''self.config.card_count = #self.cards'''
+position = "at"
+payload = '''
+self.config.card_count = #self.cards
+if Yorick.config.fix_slots then
+    if self == G.jokers then
+        for i, v in ipairs(self.cards) do   
+            if not v.edition or not v.edition.card_limit then
+                if v.ability and v.ability.immutable and v.ability.immutable.yorick_amount then
+                    if to_big(v.ability.immutable.yorick_amount) > to_big(1) then
+                        self.config.card_count = self.config.card_count + math.min(1e100, to_number(v.ability.immutable.yorick_amount) - 1)
+                    end
+                end
+            end
+        end
+    end
+    if to_big(self.config.card_count) > to_big(1e100) then
+        self.config.card_count = 1e100
+    end
+end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+pattern = '''local jokers, triggered = card:calculate_joker(context)'''
+position = "at"
+payload = '''
+local jokers, triggered, jokers_table = nil, nil, {}
+for i=1, (card and card.ability and card.ability.immutable and card.ability.immutable.yorick_amount or 1) do
+    jokers, triggered = card:calculate_joker(context)
+    if (triggered and not jokers) or not jokers then
+        break
+    end
+    table.insert(jokers_table, jokers)
+end
+jokers = Yorick.recursive_extra(jokers_table, 1)
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+pattern = '''
+-- TARGET: calc_dollar_bonus per card
+if ret then
+    i = i+1
+    add_round_eval_row({dollars = ret, bonus = true, name='joker'..i, pitch = pitch, card = _card})
+    pitch = pitch + 0.06
+    dollars = dollars + ret
+end
+'''
+position = "after"
+payload = '''
+if ret and (_card and _card.ability and _card.ability.immutable and _card.ability.immutable.yorick_amount) and to_big(_card.ability.immutable.yorick_amount) > to_big(1) then
+    for i = 1, _card.ability.immutable.yorick_amount do
+        i = i+1
+        add_round_eval_row({dollars = ret, bonus = true, name='joker'..i, pitch = pitch, card = _card})
+        pitch = pitch + 0.06
+        dollars = dollars + ret
+    end
+end
+'''
+match_indent = true
