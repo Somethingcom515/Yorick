@@ -70,7 +70,7 @@ position = "at"
 payload = '''
 self.config.card_count = #self.cards
 if Yorick.config.fix_slots then
-    if self == G.jokers then
+    if self == G.jokers or self == G.hand then
         for i, v in ipairs(self.cards) do   
             if not v.edition or not v.edition.card_limit then
                 if v.ability and v.ability.immutable and v.ability.immutable.yorick_amount then

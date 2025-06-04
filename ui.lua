@@ -50,7 +50,7 @@ end
 
 local highlight_ref = Card.highlight
 function Card:highlight(is_highlighted)
-    if self.area == G.jokers and is_highlighted and self.ability.immutable.yorick_amount and to_big(self.ability.immutable.yorick_amount) > to_big(1) then
+    if (self.area == G.jokers or self.area == G.hand) and is_highlighted and self.ability.immutable.yorick_amount and to_big(self.ability.immutable.yorick_amount) > to_big(1) then
         local y = 0
         self.children.jokersplit_one = UIBox {
             definition = {
@@ -348,6 +348,7 @@ G.FUNCS.jokermerge = function(e)
     if v then
         Yorick.set_amount(v, (v.ability.immutable.yorick_amount or 1) + (card.ability.immutable.yorick_amount or 1))
         card.ability.bypass_aleph = true
+        card.ability.dontremovefromdeck = true
         card:start_dissolve()
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
@@ -407,6 +408,7 @@ G.FUNCS.jokermerge_all = function(e)
     for i, v in ipairs(card.area.cards) do
         if Yorick.can_merge(v, card) and card ~= v then
             v.ability.bypass_aleph = true
+            card.ability.dontremovefromdeck = true
             v:start_dissolve()
             Yorick.set_amount(card, (v.ability.immutable.yorick_amount or 1) + (card.ability.immutable.yorick_amount or 1))
         end

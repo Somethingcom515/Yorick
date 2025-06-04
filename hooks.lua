@@ -1,7 +1,7 @@
 --automatically stack consumables
 local emplace_ref = CardArea.emplace
 function CardArea:emplace(card, ...)
-    if self.area ~= G.jokers or card.ability.split or Yorick.is_blacklisted(card) or not G.jokers then
+    if (self.area ~= G.jokers and self.area ~= G.hand) or card.ability.split or Yorick.is_blacklisted(card) or not G.jokers then
         emplace_ref(self, card, ...)
         if card.children.yorick_ui then
             card.children.yorick_ui:remove()
@@ -20,6 +20,7 @@ function CardArea:emplace(card, ...)
                     Yorick.set_amount(v, (v.ability.immutable.yorick_amount or 1) + (card.ability.immutable.yorick_amount or 1))
                     card.states.visible = false
                     card.ability.bypass_aleph = true
+                    card.ability.dontremovefromdeck = true
                     card:start_dissolve()
                 else
                     emplace_ref(self, card, ...)
@@ -35,52 +36,13 @@ function CardArea:emplace(card, ...)
                 Yorick.set_amount(v, (v.ability.immutable.yorick_amount or 1) + (card.ability.immutable.yorick_amount or 1))
                 card.states.visible = false
                 card.ability.bypass_aleph = true
+                card.ability.dontremovefromdeck = true
                 card:start_dissolve()
             else
                 emplace_ref(self, card, ...)
             end
         end
         G.jokers.config.card_count = G.jokers.config.card_count + (card.ability.immutable.yorick_amount or 1)
-    end
-end
-
-local set_editionref = Card.set_edition
-function Card:set_edition(edition, ...)
-    if self.area ~= G.jokers or self.ability.split or Yorick.is_blacklisted(self) or not G.jokers then
-        set_editionref(self, edition, ...)
-    else
-        if not self.ability.immutable then self.ability.immutable = {} end
-        if Yorick.config.only_stack_negatives then
-            if edition ~= "e_negative" then
-                set_editionref(self, edition, ...)
-            else    
-                local v, i = Yorick.TableMatches(self.area.cards, function(v, i)
-                    return v.config.center.key == self.config.center.key and v.edition and v.edition.key == "e_negative" and v ~= self
-                end)
-                if v then
-                    Yorick.set_amount(v, (v.ability.immutable.yorick_amount or 1) + (self.ability.immutable.yorick_amount or 1))
-                    self.states.visible = false
-                    self.ability.bypass_aleph = true
-                    self:start_dissolve()
-                else
-                    set_editionref(self, edition, ...)
-                end
-            end
-        else
-            local v, i = Yorick.TableMatches(self.area.cards, function(v, i)
-                if (not v.edition and not self.edition) or (v.edition and self.edition and v.edition.key == self.edition.key) then
-                    return v.config.center.key == self.config.center.key and v ~= self
-                end
-            end)
-            if v then
-                Yorick.set_amount(v, (v.ability.immutable.yorick_amount or 1) + (self.ability.immutable.yorick_amount or 1))
-                self.states.visible = false
-                self.ability.bypass_aleph = true
-                self:start_dissolve()
-            else
-                set_editionref(self, edition, ...)
-            end
-        end
     end
 end
 
@@ -107,6 +69,7 @@ function copy_card(other, new_card, card_scale, playing_card, strip_edition, don
             if not new_card2.ability.immutable then new_card2.ability.immutable = {} end
             new_card2.ability.immutable.yorick_amount = 0
             new_card2.ability.bypass_aleph = true
+            new_card2.ability.dontremovefromdeck = true
             new_card2:start_dissolve()
             return new_card2
         end
