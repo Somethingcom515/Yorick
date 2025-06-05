@@ -51,7 +51,7 @@ end
 local highlight_ref = Card.highlight
 function Card:highlight(is_highlighted)
     if (self.area == G.jokers or self.area == G.hand) and is_highlighted and self.ability.immutable.yorick_amount and to_big(self.ability.immutable.yorick_amount) > to_big(1) then
-        local y = 0
+        local y = JokerDisplay and JokerDisplay.config.enabled and 0.5 or 0
         self.children.jokersplit_one = UIBox {
             definition = {
                 n = G.UIT.ROOT,
@@ -208,6 +208,7 @@ function Card:highlight(is_highlighted)
         end
     else    
         if is_highlighted and Yorick.can_merge(self) then
+            local other_y = JokerDisplay and JokerDisplay.config.enabled and 0.5 or 0
             self.children.jokermerge = UIBox {
                 definition = {
                     n = G.UIT.ROOT,
@@ -240,7 +241,7 @@ function Card:highlight(is_highlighted)
                     align = 'bmi',
                     offset = {
                         x = 0,
-                        y = 0.3
+                        y = other_y + 0.5
                     },
                     bond = 'Strong',
                     parent = self
@@ -278,7 +279,7 @@ function Card:highlight(is_highlighted)
                     align = 'bmi',
                     offset = {
                         x = 0,
-                        y = 0.8
+                        y = other_y + 1
                     },
                     bond = 'Strong',
                     parent = self
