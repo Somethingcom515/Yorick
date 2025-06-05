@@ -97,10 +97,9 @@ payload = '''
 local jokers, triggered, jokers_table = nil, nil, {}
 for i=1, (card and card.ability and card.ability.immutable and card.ability.immutable.yorick_amount or 1) do
     jokers, triggered = card:calculate_joker(context)
-    if (triggered and not jokers) or not jokers then
-        break
+    if jokers then
+        table.insert(jokers_table, jokers)
     end
-    table.insert(jokers_table, jokers)
 end
 jokers = Yorick.recursive_extra(jokers_table, 1)
 '''
@@ -126,6 +125,66 @@ if ret and (_card and _card.ability and _card.ability.immutable and _card.abilit
         add_round_eval_row({dollars = ret, bonus = true, name='joker'..i, pitch = pitch, card = _card})
         pitch = pitch + 0.06
         dollars = dollars + ret
+    end
+end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+pattern = '''
+local joker_eval,post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, other_main = _card })
+if next(joker_eval) then
+    if joker_eval.edition then joker_eval.edition = {} end
+    joker_eval.jokers.juice_card = _joker
+    table.insert(effects, joker_eval)
+    for _, v in ipairs(post) do effects[#effects+1] = v end
+    if joker_eval.retriggers then
+        for rt = 1, #joker_eval.retriggers do
+            local rt_eval, rt_post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, retrigger_joker = true})
+            table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
+            table.insert(effects, rt_eval)
+            for _, v in ipairs(rt_post) do effects[#effects+1] = v end
+        end
+    end
+end
+'''
+position = "at"
+payload = '''
+if (_card and _card.ability and _card.ability.set == 'Joker' and _card.ability.immutable and _card.ability.immutable.yorick_amount) then
+    for i=1, (_card.ability.immutable.yorick_amount or 1) do
+        local joker_eval,post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, other_main = _card })
+        if next(joker_eval) then
+            if joker_eval.edition then joker_eval.edition = {} end
+            joker_eval.jokers.juice_card = _joker
+            table.insert(effects, joker_eval)
+            for _, v in ipairs(post) do effects[#effects+1] = v end
+            if joker_eval.retriggers then
+                for rt = 1, #joker_eval.retriggers do
+                    local rt_eval, rt_post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, retrigger_joker = true})
+                    table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
+                    table.insert(effects, rt_eval)
+                    for _, v in ipairs(rt_post) do effects[#effects+1] = v end
+                end
+            end
+        end
+    end
+else
+    local joker_eval,post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, other_main = _card })
+    if next(joker_eval) then
+        if joker_eval.edition then joker_eval.edition = {} end
+        joker_eval.jokers.juice_card = _joker
+        table.insert(effects, joker_eval)
+        for _, v in ipairs(post) do effects[#effects+1] = v end
+        if joker_eval.retriggers then
+            for rt = 1, #joker_eval.retriggers do
+                local rt_eval, rt_post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, retrigger_joker = true})
+                table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
+                table.insert(effects, rt_eval)
+                for _, v in ipairs(rt_post) do effects[#effects+1] = v end
+            end
+        end
     end
 end
 '''

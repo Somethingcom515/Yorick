@@ -30,7 +30,7 @@ function Yorick.can_merge(self, card, bypass, ignore_area)
                         return v.config.center.key == self.config.center.key and v.edition and v.edition.key == "e_negative" and (v ~= self or bypass)
                     end)
                     return v
-                else
+                elseif Yorick.config.can_stack_playing_cards then
                     local v, i = Yorick.TableMatches(self.area.cards, function(v, i)
                         return Yorick.playingcardissame(v, self) and v.edition and v.edition.key == "e_negative" and (v ~= self or bypass)
                     end)
@@ -45,7 +45,7 @@ function Yorick.can_merge(self, card, bypass, ignore_area)
                     end
                 end)
                 return v
-            else
+            elseif Yorick.config.can_stack_playing_cards then
                 local v, i = Yorick.TableMatches(self.area.cards, function(v, i)
                     return Yorick.playingcardissame(v, self) and (v ~= self or bypass)
                 end)
@@ -58,18 +58,18 @@ function Yorick.can_merge(self, card, bypass, ignore_area)
             if not self.edition or self.edition.key ~= "e_negative" then
                 return 
             else 
-                if not (card.playing_card and card.playing_card) then
+                if not (card.playing_card and self.playing_card) then
                     return card.config.center.key == self.config.center.key and card.edition and card.edition.key == "e_negative" and (v ~= self or bypass)
-                else
+                elseif Yorick.config.can_stack_playing_cards then
                     return Yorick.playingcardissame(card, self) and card.edition and card.edition.key == "e_negative" and (v ~= self or bypass)
                 end
             end
         else
-            if not (card.playing_card and card.playing_card) then
+            if not (card.playing_card and self.playing_card) then
                 if (not card.edition and not self.edition) or (card.edition and self.edition and card.edition.key == self.edition.key) then
                     return card.config.center.key == self.config.center.key and (card ~= self or bypass)
                 end
-            else
+            elseif Yorick.config.can_stack_playing_cards then
                 return Yorick.playingcardissame(card, self) and (card ~= self or bypass)
             end
         end

@@ -430,6 +430,14 @@ local yorickConfigTab = function()
 	config = { n = G.UIT.R, config = { align = "tm", padding = 0 }, nodes = { left_settings, right_settings } }
 	ovrf_nodes[#ovrf_nodes + 1] = config
 	ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
+		label = localize("k_can_stack_playing_cards"),
+		active_colour = HEX("40c76d"),
+		ref_table = Yorick.config,
+		ref_value = "can_stack_playing_cards",
+		callback = function()
+        end,
+	})
+	ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
 		label = localize("k_only_stack_negative_jokers"),
 		active_colour = HEX("40c76d"),
 		ref_table = Yorick.config,

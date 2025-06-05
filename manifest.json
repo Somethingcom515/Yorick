@@ -3,7 +3,7 @@
     "id": "yorick",
     "version": "1.0.0",
     "website_url": "",
-    "description": "A joker stacking system built from Overflow.",
+    "description": "A non-consumable stacking mod built from Overflow.",
     "prefix": "yorick",
     "author": ["Somethingcom515"],
     "main_file": "Yorick.lua",
