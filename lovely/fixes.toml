@@ -107,6 +107,23 @@ match_indent = true
 
 [[patches]]
 [patches.pattern]
+target = "functions/common_events.lua"
+pattern = '''local edition = card:calculate_edition(context)'''
+position = "at"
+payload = '''
+local edition, edition_table = nil, {}
+for i=1, (card and card.ability and card.ability.immutable and card.ability.immutable.yorick_amount or 1) do
+    edition = card:calculate_edition(context)
+    if edition then
+        table.insert(edition_table, edition)
+    end
+end
+edition = Yorick.recursive_extra(edition_table, 1)
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
 -- TARGET: calc_dollar_bonus per card
@@ -186,6 +203,22 @@ else
             end
         end
     end
+end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+pattern = '''
+if key == 'extra' then
+    return SMODS.calculate_effect(amount, scored_card)
+end
+'''
+position = "at"
+payload = '''
+if key == 'extra' then
+    return SMODS.calculate_effect(amount, scored_card, from_edition)
 end
 '''
 match_indent = true
