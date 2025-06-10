@@ -78,6 +78,7 @@ end
 
 function Yorick.set_amount(card, amount)
     if card then
+        if not amount or type(amount) ~= "number" then return nil end
         if to_big(amount) < to_big(1e100) then
             amount = to_number(amount)
         end
