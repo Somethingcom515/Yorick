@@ -222,3 +222,38 @@ if key == 'extra' then
 end
 '''
 match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/overrides.lua"]'''
+pattern = '''
+for _, v in ipairs(G.handlist) do
+    local ui_element = create_UIBox_current_hand_row(v, simple)
+'''
+position = "at"
+payload = '''
+local oldtable = G.handlist
+local handtable = G.handlist
+local sortpokerhandsbyplayed = function(a, b)
+    return G.GAME.hands[a].played > G.GAME.hands[b].played
+end
+if G.GAME.yorick_poker_hand_sort and G.GAME.yorick_poker_hand_sort == "Played" then
+    table.sort(handtable, sortpokerhandsbyplayed)
+end
+for _, v in ipairs(handtable) do
+    local ui_element = create_UIBox_current_hand_row(v, simple)
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/overrides.lua"]'''
+pattern = '''
+local visible_hands = {}
+for _, v in ipairs(G.handlist) do
+'''
+position = "before"
+payload = '''
+G.handlist = oldtable
+'''
+match_indent = true

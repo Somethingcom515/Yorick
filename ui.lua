@@ -1,4 +1,4 @@
---manage buttons for the consumables
+--manage buttons for the non-consumables
 function Card:create_yorick_ui()
     if not self.ability.immutable then self.ability.immutable = {} end
     if self.ability.immutable.yorick_amount and (to_big(self.ability.immutable.yorick_amount) == to_big(1) or to_big(self.ability.immutable.yorick_amount) == to_big(0)) then
@@ -322,12 +322,24 @@ end
 
 G.FUNCS.jokersplit_one = function(e)
 	local card = e.config.ref_table
+    if card.playing_card then
+        G.playing_card = (G.playing_card and G.playing_card + 1) or 1
+        local new_card = copy_card(card, nil, nil, G.playing_card)
+        Yorick.set_amount(new_card, nil)
+        Yorick.set_amount(card, card.ability.immutable.yorick_amount - 1)
+        new_card:add_to_deck()
+        new_card.ability.split = true
+        G.deck.config.card_limit = G.deck.config.card_limit + 1
+        table.insert(G.playing_cards, new_card)
+        G.hand:emplace(new_card)
+    else
     local new_card = copy_card(card)
     Yorick.set_amount(new_card, nil)
     Yorick.set_amount(card, card.ability.immutable.yorick_amount - 1)
     new_card:add_to_deck()
     new_card.ability.split = true
     card.area:emplace(new_card)
+    end
 end
 
 G.FUNCS.jokercan_merge = function(e)

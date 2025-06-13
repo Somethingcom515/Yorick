@@ -19,7 +19,7 @@ function Yorick.playingcardissame(card1, card2)
 end
 
 function Yorick.can_merge(self, card, bypass, ignore_area)
-    if Yorick.is_blacklisted(self) or Yorick.is_blacklisted(card) or ((self.area ~= G.jokers and self.area ~= G.hand) and not ignore_area) then return end
+    if Yorick.is_blacklisted(self) or Yorick.is_blacklisted(card) or ((self.area ~= G.jokers and self.area ~= G.hand) and not ignore_area) or (self.area == G.hand and not Yorick.config.can_stack_playing_cards) then return nil end
     if not card then
         if Yorick.config.only_stack_negatives then
             if not self.edition or self.edition.key ~= "e_negative" then
@@ -76,6 +76,74 @@ function Yorick.can_merge(self, card, bypass, ignore_area)
     end
 end
 
+G.FUNCS.sort_poker_hands = function(e)
+    G.GAME.yorick_poker_hand_sort = G.GAME.yorick_poker_hand_sort or "Order"
+    G.poker_hand_string = "Sort Poker Hands by "..G.GAME.yorick_poker_hand_sort
+    if G.GAME.yorick_poker_hand_sort == "Played" then
+        G.GAME.yorick_poker_hand_sort = "Order"
+    else
+        G.GAME.yorick_poker_hand_sort = "Played"
+    end
+end
+
+local oldgamestartrun = Game.start_run
+function Game:start_run(args)
+    local g = oldgamestartrun(self, args)
+    G.poker_hand_string = "Sort Poker Hands by "..(G.GAME.yorick_poker_hand_sort or "Played")
+    self.yorick_sort_poker_hands = UIBox {
+        definition = {
+            n = G.UIT.ROOT,
+            config = {
+                align = "cm",
+                minw = 1,
+                minh = 0.3,
+                padding = 0.15,
+                r = 0.1,
+                colour = G.C.CLEAR
+            },
+            nodes = {
+                {
+                    n = G.UIT.C,
+                    config = {
+                        align = "tm",
+                        minw = 2,
+                        padding = 0.1,
+                        r = 0.1,
+                        hover = true,
+                        colour = G.C.RED,
+                        shadow = true,
+                        button = 'sort_poker_hands',
+                    },
+                    nodes = {
+                        {
+                            n = G.UIT.R,
+                            config = { align = "bcm", padding = 0 },
+                            nodes = {
+                                {
+                                    n = G.UIT.T,
+                                    config = {
+                                        ref_table = G,
+                                        ref_value = 'poker_hand_string',
+                                        scale = 0.35,
+                                        colour = G.C.UI.TEXT_LIGHT
+                                    }
+                                }
+                            }
+                        },
+                    }
+                },
+            }
+        },
+        config = {
+            align = "cardarea_add_to_highlighted_ref",
+            offset = { x = 10, y = -0.75 },
+            major = G.jokers,
+            bond = 'Weak'
+        }
+    }
+    return g
+end
+
 function Yorick.set_amount(card, amount)
     if card then
         if not amount or type(amount) ~= "number" then return nil end
@@ -130,9 +198,9 @@ function Yorick.is_blacklisted(card)
     return Yorick.blacklist[card.config.center.key] or Yorick.blacklist[card.config.center.set]
 end
 
-function CardArea:get_total_count()
+function Yorick.get_total_count(area)
     local total = 0
-    for i, v in ipairs(self.cards) do
+    for i, v in ipairs(area.cards) do
         total = total + (v and v.ability and v.ability.immutable and v.ability.immutable.yorick_amount or 1)
     end
     return total
