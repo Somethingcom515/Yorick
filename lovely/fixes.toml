@@ -5,120 +5,15 @@ priority = 0
 
 [[patches]]
 [patches.pattern]
-target = "engine/controller.lua"
+target = '=[lovely debugplus.core "debugplus/core.lua"]'
 pattern = '''
-local debugplus = require("debugplus.core")
-debugplus.handleKeys(self, key, dt)
+local new_card = copy_card(_card, nil, nil, _card.playing_card)
 '''
 position = "at"
 payload = '''
-local debugplus = require("debugplus.core")
-local ref = debugplus.handleKeys
-debugplus.handleKeys = function(controller, key, dt)
-    if controller.hovering.target and controller.hovering.target:is(Card) then
-        local _card = controller.hovering.target
-        if key == "c" then
-            local _area
-            if _card.ability.set == 'Joker' then
-                _area = G.jokers
-            elseif _card.playing_card then
-                if G.hand and G.hand.config.card_count ~= 0 then
-                    _area = G.hand
-                else 
-                    _area = G.deck
-                end
-            elseif _card.ability.consumeable then
-                _area = G.consumeables
-            end
-            if _area == nil then
-                return print("Error: Trying to dup card without an area")
-            end
-            local new_card = copy_card(_card, nil, nil, _card.playing_card, nil, true)
-            new_card:add_to_deck()
-            if _card.playing_card then
-                table.insert(G.playing_cards, new_card)
-            end
-            _area:emplace(new_card)
-        else
-            ref(controller, key, dt)
-        end
-    end
-end
-debugplus.handleKeys(self, key, dt)
-'''
-match_indent = true
-overwrite = false
-
-[[patches]]
-[patches.pattern]
-target = "main.lua"
-pattern = '''function love.load()'''
-position = "before"
-payload = '''
-Yorick = {}
-Yorick.blacklist = {
-
-}
-'''
-match_indent = true
-
-[[patches]]
-[patches.pattern]
-target = "cardarea.lua"
-pattern = '''self.config.card_count = #self.cards'''
-position = "at"
-payload = '''
-self.config.card_count = #self.cards
-if Yorick.config.fix_slots then
-    if self == G.jokers or self == G.hand then
-        for i, v in ipairs(self.cards) do   
-            if not v.edition or not v.edition.card_limit then
-                if v.ability and v.ability.immutable and v.ability.immutable.yorick_amount then
-                    if to_big(v.ability.immutable.yorick_amount) > to_big(1) then
-                        self.config.card_count = self.config.card_count + math.min(1e100, to_number(v.ability.immutable.yorick_amount) - 1)
-                    end
-                end
-            end
-        end
-    end
-    if to_big(self.config.card_count) > to_big(1e100) then
-        self.config.card_count = 1e100
-    end
-end
-'''
-match_indent = true
-
-[[patches]]
-[patches.pattern]
-target = "functions/common_events.lua"
-pattern = '''local jokers, triggered = card:calculate_joker(context)'''
-position = "at"
-payload = '''
-local jokers, triggered, jokers_table = nil, nil, {}
-for i=1, (card and card.ability and card.ability.immutable and card.ability.immutable.yorick_amount or 1) do
-    jokers, triggered = card:calculate_joker(context)
-    if jokers then
-        table.insert(jokers_table, jokers)
-    end
-end
-jokers = Yorick.recursive_extra(jokers_table, 1)
-'''
-match_indent = true
-
-[[patches]]
-[patches.pattern]
-target = "functions/common_events.lua"
-pattern = '''local edition = card:calculate_edition(context)'''
-position = "at"
-payload = '''
-local edition, edition_table = nil, {}
-for i=1, (card and card.ability and card.ability.immutable and card.ability.immutable.yorick_amount or 1) do
-    edition = card:calculate_edition(context)
-    if edition then
-        table.insert(edition_table, edition)
-    end
-end
-edition = Yorick.recursive_extra(edition_table, 1)
+G.yorick_dont_reset_qty = true
+local new_card = copy_card(_card, nil, nil, _card.playing_card)
+G.yorick_dont_reset_qty = nil
 '''
 match_indent = true
 
@@ -149,66 +44,6 @@ match_indent = true
 
 [[patches]]
 [patches.pattern]
-target = "functions/state_events.lua"
-pattern = '''
-local joker_eval,post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, other_main = _card })
-if next(joker_eval) then
-    if joker_eval.edition then joker_eval.edition = {} end
-    joker_eval.jokers.juice_card = _joker
-    table.insert(effects, joker_eval)
-    for _, v in ipairs(post) do effects[#effects+1] = v end
-    if joker_eval.retriggers then
-        for rt = 1, #joker_eval.retriggers do
-            local rt_eval, rt_post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, retrigger_joker = true})
-            table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
-            table.insert(effects, rt_eval)
-            for _, v in ipairs(rt_post) do effects[#effects+1] = v end
-        end
-    end
-end
-'''
-position = "at"
-payload = '''
-if (_card and _card.ability and _card.ability.set == 'Joker' and _card.ability.immutable and _card.ability.immutable.yorick_amount) then
-    for i=1, (_card.ability.immutable.yorick_amount or 1) do
-        local joker_eval,post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, other_main = _card })
-        if next(joker_eval) then
-            if joker_eval.edition then joker_eval.edition = {} end
-            joker_eval.jokers.juice_card = _joker
-            table.insert(effects, joker_eval)
-            for _, v in ipairs(post) do effects[#effects+1] = v end
-            if joker_eval.retriggers then
-                for rt = 1, #joker_eval.retriggers do
-                    local rt_eval, rt_post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, retrigger_joker = true})
-                    table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
-                    table.insert(effects, rt_eval)
-                    for _, v in ipairs(rt_post) do effects[#effects+1] = v end
-                end
-            end
-        end
-    end
-else
-    local joker_eval,post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, other_main = _card })
-    if next(joker_eval) then
-        if joker_eval.edition then joker_eval.edition = {} end
-        joker_eval.jokers.juice_card = _joker
-        table.insert(effects, joker_eval)
-        for _, v in ipairs(post) do effects[#effects+1] = v end
-        if joker_eval.retriggers then
-            for rt = 1, #joker_eval.retriggers do
-                local rt_eval, rt_post = eval_card(_joker, {full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, [other_key] = _card, retrigger_joker = true})
-                table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
-                table.insert(effects, rt_eval)
-                for _, v in ipairs(rt_post) do effects[#effects+1] = v end
-            end
-        end
-    end
-end
-'''
-match_indent = true
-
-[[patches]]
-[patches.pattern]
 target = '''=[SMODS _ "src/utils.lua"]'''
 pattern = '''
 if key == 'extra' then
@@ -225,21 +60,17 @@ match_indent = true
 
 [[patches]]
 [patches.pattern]
-target = '''=[SMODS _ "src/overrides.lua"]'''
+target = "card.lua"
 pattern = '''
-for _, v in ipairs(G.handlist) do
-    local ui_element = create_UIBox_current_hand_row(v, simple)
+G.E_MANAGER:add_event(Event({
+    func = function()
+        context.other_joker:juice_up(0.5, 0.5)
+        return true
+    end
+})) 
 '''
 position = "at"
 payload = '''
-local handtable = Yorick.deep_copy(G.handlist)
-local sortpokerhandsbyplayed = function(a, b)
-    return G.GAME.hands[a].played > G.GAME.hands[b].played
-end
-if G.GAME.yorick_poker_hand_sort and G.GAME.yorick_poker_hand_sort == "Played" then
-    table.sort(handtable, sortpokerhandsbyplayed)
-end
-for _, v in ipairs(handtable) do
-    local ui_element = create_UIBox_current_hand_row(v, simple)
+-- Removed by Yorick
 '''
 match_indent = true

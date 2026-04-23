@@ -1,13 +1,9 @@
 --manage buttons for the non-consumables
 function Card:create_yorick_ui()
-    if not self.ability.immutable then self.ability.immutable = {} end
-    if self.ability.immutable.yorick_amount and (to_big(self.ability.immutable.yorick_amount) == to_big(1) or to_big(self.ability.immutable.yorick_amount) == to_big(0)) then
-        self.ability.immutable.yorick_amount = nil
-    end
-    if self.ability.immutable.yorick_amount and self.ability.immutable.yorick_amount_text ~= "" then
+    if to_big(self.ability.immutable.yorick_amount) >= to_big(2) and self.ability.immutable.yorick_amount_text ~= "" then
         if self.children.yorick_ui then
             self.children.yorick_ui:remove()
-            self.children.yorick_ui = nil 
+            self.children.yorick_ui = nil
         end
         self.ability.immutable.yorick_amount_text = self.ability.immutable.yorick_amount_text or number_format(self.ability.immutable.yorick_amount)
         self.children.yorick_ui = UIBox {
@@ -31,26 +27,26 @@ function Card:create_yorick_ui()
     else
         if self.children.yorick_ui then
             self.children.yorick_ui:remove()
-            self.children.yorick_ui = nil 
+            self.children.yorick_ui = nil
         end
-        self.ability.immutable.yorick_amount = nil
+        self.ability.immutable.yorick_amount = 1
     end
 end
 
-local card_load_ref = Card.load
-function Card:load(cardTable, other_card)
-	card_load_ref(self, cardTable, other_card)
-	if self.ability then
-        if not self.ability.immutable then self.ability.immutable = {} end
-		if self.ability.immutable.yorick_amount then
-			self:create_yorick_ui()
-		end
-	end
+local oldcardload = Card.load
+function Card:load(...)
+	oldcardload(self, ...)
+	if self.ability and self.ability.immutable and self.ability.immutable.yorick_amount then
+        self:create_yorick_ui()
+    else
+        self.ability.immutable = self.ability.immutable or {}
+        self.ability.immutable.yorick_amount = 1
+    end
 end
 
-local highlight_ref = Card.highlight
-function Card:highlight(is_highlighted)
-    if (self.area == G.jokers or self.area == G.hand) and is_highlighted and self.ability.immutable.yorick_amount and to_big(self.ability.immutable.yorick_amount) > to_big(1) then
+local oldcardhighlight = Card.highlight
+function Card:highlight(is_higlighted)
+    if (self.area == G.jokers or self.area == G.hand) and is_higlighted and self.ability.immutable.yorick_amount and to_big(self.ability.immutable.yorick_amount) > to_big(1) then
         local y = JokerDisplay and JokerDisplay.config.enabled and 0.5 or 0
         self.children.jokersplit_one = UIBox {
             definition = {
@@ -207,7 +203,7 @@ function Card:highlight(is_highlighted)
             }
         end
     else    
-        if is_highlighted and Yorick.can_merge(self) then
+        if is_higlighted and Yorick.can_merge(self) then
             local other_y = JokerDisplay and JokerDisplay.config.enabled and 0.5 or 0
             self.children.jokermerge = UIBox {
                 definition = {
@@ -304,13 +300,13 @@ function Card:highlight(is_highlighted)
             end
         end
     end
-    return highlight_ref(self,is_highlighted)
+    oldcardhighlight(self, is_higlighted)
 end
 
 G.FUNCS.jokercan_split_one = function(e)
 	local card = e.config.ref_table
 	if to_big(card.ability.immutable.yorick_amount) > to_big(1) then
-        e.config.colour = G.C.SECONDARY_SET[card.config.center.set]
+        e.config.colour = (card.ability.set == 'Default' or card.ability.set == 'Enhanced') and G.C.SUITS[card.base.suit] or G.C.SECONDARY_SET[card.config.center.set]
         e.config.button = 'jokersplit_one'
 		e.states.visible = true
 	else
@@ -321,31 +317,13 @@ G.FUNCS.jokercan_split_one = function(e)
 end
 
 G.FUNCS.jokersplit_one = function(e)
-	local card = e.config.ref_table
-    if card.playing_card then
-        G.playing_card = (G.playing_card and G.playing_card + 1) or 1
-        local new_card = copy_card(card, nil, nil, G.playing_card)
-        Yorick.set_amount(new_card, nil)
-        Yorick.set_amount(card, card.ability.immutable.yorick_amount - 1)
-        new_card:add_to_deck()
-        new_card.ability.split = true
-        G.deck.config.card_limit = G.deck.config.card_limit + 1
-        table.insert(G.playing_cards, new_card)
-        G.hand:emplace(new_card)
-    else
-    local new_card = copy_card(card)
-    Yorick.set_amount(new_card, nil)
-    Yorick.set_amount(card, card.ability.immutable.yorick_amount - 1)
-    new_card:add_to_deck()
-    new_card.ability.split = true
-    card.area:emplace(new_card)
-    end
+	Yorick.split(e.config.ref_table, 1)
 end
 
 G.FUNCS.jokercan_merge = function(e)
 	local card = e.config.ref_table
 	if Yorick.can_merge(card) then
-        e.config.colour = G.C.SECONDARY_SET[card.config.center.set]
+        e.config.colour = (card.ability.set == 'Default' or card.ability.set == 'Enhanced') and G.C.SUITS[card.base.suit] or G.C.SECONDARY_SET[card.config.center.set]
         e.config.button = 'jokermerge'
 		e.states.visible = true
 	else
@@ -359,25 +337,14 @@ G.FUNCS.jokermerge = function(e)
 	local card = e.config.ref_table
     local v = Yorick.can_merge(card)
     if v then
-        Yorick.set_amount(v, (v.ability.immutable.yorick_amount or 1) + (card.ability.immutable.yorick_amount or 1))
-        card.ability.bypass_aleph = true
-        card.ability.dontremovefromdeck = true
-        card:start_dissolve()
-        G.E_MANAGER:add_event(Event({
-            trigger = 'after',
-            func = function()
-                v:create_yorick_ui()
-                card:create_yorick_ui()
-                return true
-            end
-        }))
+        Yorick.merge(card, v)
     end
 end
 
 G.FUNCS.jokercan_split_half = function(e)
 	local card = e.config.ref_table
 	if to_big(card.ability.immutable.yorick_amount) > to_big(1) then
-        e.config.colour = G.C.SECONDARY_SET[card.config.center.set]
+        e.config.colour = (card.ability.set == 'Default' or card.ability.set == 'Enhanced') and G.C.SUITS[card.base.suit] or G.C.SECONDARY_SET[card.config.center.set]
         e.config.button = 'jokersplit_half'
 		e.states.visible = true
 	else
@@ -388,25 +355,18 @@ G.FUNCS.jokercan_split_half = function(e)
 end
 
 G.FUNCS.jokersplit_half = function(e)
-	local card = e.config.ref_table
-    local new_card = copy_card(card)
-    local top_half = math.floor(card.ability.immutable.yorick_amount/2)
-    local bottom_half = card.ability.immutable.yorick_amount - top_half
-    Yorick.set_amount(new_card, bottom_half)
-    Yorick.set_amount(card, top_half)
-    new_card:add_to_deck()
-    new_card.ability.split = true
-    card.area:emplace(new_card)
+    local card = e.config.ref_table
+    Yorick.split(card, math.floor(card.ability.immutable.yorick_amount/2))
 end
 
 G.FUNCS.jokercan_merge_all = function(e)
 	local card = e.config.ref_table
     local count = 0
-    for i, v in ipairs(card.area.cards) do
-        if v ~= card and v.config.center.key == card.config.center.key then count = count + 1 end
+    for _, v in ipairs(card.area.cards) do
+        if v ~= card and v.config.center_key == card.config.center_key then count = count + 1 end
     end
 	if Yorick.can_merge(card) and count > 1 then
-        e.config.colour = G.C.SECONDARY_SET[card.config.center.set]
+        e.config.colour = (card.ability.set == 'Default' or card.ability.set == 'Enhanced') and G.C.SUITS[card.base.suit] or G.C.SECONDARY_SET[card.config.center.set]
         e.config.button = 'jokermerge_all'
 		e.states.visible = true
 	else
@@ -418,31 +378,20 @@ end
 
 G.FUNCS.jokermerge_all = function(e)
 	local card = e.config.ref_table
-    for i, v in ipairs(card.area.cards) do
-        if Yorick.can_merge(v, card) and card ~= v then
-            v.ability.bypass_aleph = true
-            card.ability.dontremovefromdeck = true
-            v:start_dissolve()
-            Yorick.set_amount(card, (v.ability.immutable.yorick_amount or 1) + (card.ability.immutable.yorick_amount or 1))
+    for _, v in ipairs(card.area.cards) do
+        if card ~= v and Yorick.can_merge(v, card) then
+            Yorick.merge(card, v)
         end
     end
-    G.E_MANAGER:add_event(Event({
-        trigger = 'after',
-        func = function()
-            card:create_yorick_ui()
-            return true
-        end
-    }))
 end
 
 local yorickConfigTab = function()
-	ovrf_nodes = {
-	}
+	yorc_nodes = {}
 	left_settings = { n = G.UIT.C, config = { align = "tl", padding = 0.05 }, nodes = {} }
 	right_settings = { n = G.UIT.C, config = { align = "tl", padding = 0.05 }, nodes = {} }
 	config = { n = G.UIT.R, config = { align = "tm", padding = 0 }, nodes = { left_settings, right_settings } }
-	ovrf_nodes[#ovrf_nodes + 1] = config
-	ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
+	yorc_nodes[#yorc_nodes+1] = config
+	yorc_nodes[#yorc_nodes+1] = create_toggle({
 		label = localize("k_can_stack_playing_cards"),
 		active_colour = HEX("40c76d"),
 		ref_table = Yorick.config,
@@ -450,19 +399,51 @@ local yorickConfigTab = function()
 		callback = function()
         end,
 	})
-	ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
-		label = localize("k_only_stack_negative_jokers"),
+    --[[
+	yorc_nodes[#yorc_nodes+1] = create_toggle({
+		label = localize("k_joker_buttons_are_most_prominent_colour"),
+		active_colour = HEX("40c76d"),
+		ref_table = Yorick.config,
+		ref_value = "joker_buttons_are_most_prominent_colour",
+		callback = function()
+        end,
+	})
+    ]]
+	yorc_nodes[#yorc_nodes+1] = create_toggle({
+		label = localize("k_only_stack_negatives"),
 		active_colour = HEX("40c76d"),
 		ref_table = Yorick.config,
 		ref_value = "only_stack_negatives",
 		callback = function()
         end,
 	})
-    ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
-		label = localize("k_fix_slots"),
-		active_colour = HEX("40c76d"),
+    yorc_nodes[#yorc_nodes+1] = create_toggle({
+		label = localize('k_fix_slots'),
+		active_colour = HEX('40c76d'),
 		ref_table = Yorick.config,
-		ref_value = "fix_slots",
+		ref_value = 'fix_slots',
+		callback = function()
+            if not G.jokers or not G.hand then return end
+            for _, v in ipairs({G.jokers, G.hand}) do
+                for _, vv in ipairs(v.cards) do
+                    vv.ability.extra_slots_used = vv.ability.extra_slots_used + ((Yorick.config.fix_slots and 1 or -1)*(vv.ability.immutable.yorick_amount-1))
+                end
+            end
+        end,
+	})
+    yorc_nodes[#yorc_nodes+1] = create_toggle({
+		label = localize('k_fix_random'),
+		active_colour = HEX('40c76d'),
+		ref_table = Yorick.config,
+		ref_value = 'fix_random',
+		callback = function()
+        end,
+	})
+    yorc_nodes[#yorc_nodes+1] = create_toggle({
+		label = localize('k_merge_scoring_effects'),
+		active_colour = HEX('40c76d'),
+		ref_table = Yorick.config,
+		ref_value = 'merge_scoring_effects',
 		callback = function()
         end,
 	})
@@ -477,8 +458,8 @@ local yorickConfigTab = function()
 			padding = 0.2,
 			colour = G.C.BLACK,
 		},
-		nodes = ovrf_nodes,
+		nodes = yorc_nodes,
 	}
 end
 
-SMODS.current_mod.config_tab = yorickConfigTab
+Yorick.config_tab = yorickConfigTab
