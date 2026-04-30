@@ -344,10 +344,6 @@ function Yorick.set_amount(card, amount)
     if not card then return end
     amount = amount or 1
     local add
-    if (to_big(amount) <= to_big(1)) then
-        card.ability.immutable.yorick_amount = 1
-        goto skip
-    end
     if to_big(amount) < to_big(1e100) then
         amount = to_number(amount)
     end
@@ -359,7 +355,6 @@ function Yorick.set_amount(card, amount)
     if Yorick.config.fix_slots and not (card.edition and card.edition.negative) then
         card.ability.extra_slots_used = (card.ability.extra_slots_used or 0) + to_number(add)
     end
-    ::skip::
     card.ability.immutable.yorick_amount_text = number_format(amount)
     card:set_cost()
     card:create_yorick_ui()

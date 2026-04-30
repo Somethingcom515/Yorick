@@ -7,7 +7,7 @@
 	"main_file": "main.lua",
 	"priority": 2345,
 	"badge_colour": "FDA200",
-	"display_name": "Seals On Everything",
+	"display_name": "Yorick",
 	"icon_path": "modicon.png",
 	"version": "2.0.0",
 	"dependencies": [
