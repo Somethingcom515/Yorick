@@ -300,7 +300,7 @@ end
 if Yorick.config.fix_random then
     local oldpseudorandomelement = pseudorandom_element
     function pseudorandom_element(_t, seed, args)
-        if G.STAGE ~= G.STAGES.RUN then return oldpseudorandomelement(_t, seed, args) end
+        if not G.deck then return oldpseudorandomelement(_t, seed, args) end
         local t = SMODS.shallow_copy(_t)
         for k, v in pairs(_t) do
             if Card.is(v, Card) then

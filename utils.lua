@@ -244,25 +244,27 @@ end
 ]]
 
 function Yorick.merge(card, card2)
-    card.ability.immutable.yorick_stored_properties = card.ability.immutable.yorick_stored_properties or {}
-    local other_yorick_stored_properties = card2.ability.immutable.yorick_stored_properties
-    card2.ability.immutable.yorick_stored_properties = nil
-    local yorick_stored_properties = {
-        enhancement = card2.ability.set == 'Enhanced' and card2.config.center_key or nil,
-        seal = card2.seal,
-        edition = card2.edition,
-        stickers = {},
-        ability = copy_table(card2.ability)
-    }
-    for _, v in ipairs(SMODS.Sticker.obj_buffer) do
-        if card2.ability[v] then
-            yorick_stored_properties.stickers[#yorick_stored_properties.stickers+1] = v
+    if not Yorick.config.dont_save_values then
+        card.ability.immutable.yorick_stored_properties = card.ability.immutable.yorick_stored_properties or {}
+        local other_yorick_stored_properties = card2.ability.immutable.yorick_stored_properties
+        card2.ability.immutable.yorick_stored_properties = nil
+        local yorick_stored_properties = {
+            enhancement = card2.ability.set == 'Enhanced' and card2.config.center_key or nil,
+            seal = card2.seal,
+            edition = card2.edition,
+            stickers = {},
+            ability = copy_table(card2.ability)
+        }
+        for _, v in ipairs(SMODS.Sticker.obj_buffer) do
+            if card2.ability[v] then
+                yorick_stored_properties.stickers[#yorick_stored_properties.stickers+1] = v
+            end
         end
-    end
-    card.ability.immutable.yorick_stored_properties[#card.ability.immutable.yorick_stored_properties+1] = yorick_stored_properties
-    if other_yorick_stored_properties and other_yorick_stored_properties[1] then
-        for _, v in ipairs(other_yorick_stored_properties) do
-            card.ability.immutable.yorick_stored_properties[#card.ability.immutable.yorick_stored_properties+1] = copy_table(v)
+        card.ability.immutable.yorick_stored_properties[#card.ability.immutable.yorick_stored_properties+1] = yorick_stored_properties
+        if other_yorick_stored_properties and other_yorick_stored_properties[1] then
+            for _, v in ipairs(other_yorick_stored_properties) do
+                card.ability.immutable.yorick_stored_properties[#card.ability.immutable.yorick_stored_properties+1] = copy_table(v)
+            end
         end
     end
     Yorick.set_amount(card, card.ability.immutable.yorick_amount + card2.ability.immutable.yorick_amount)

@@ -447,6 +447,14 @@ local yorickConfigTab = function()
 		callback = function()
         end,
 	})
+    yorc_nodes[#yorc_nodes+1] = create_toggle({
+		label = localize('k_dont_save_values'),
+		active_colour = HEX('40c76d'),
+		ref_table = Yorick.config,
+		ref_value = 'dont_save_values',
+		callback = function()
+        end,
+	})
 	return {
 		n = G.UIT.ROOT,
 		config = {
